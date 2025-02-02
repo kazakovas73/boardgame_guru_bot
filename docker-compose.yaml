@@ -1,0 +1,40 @@
+services:
+  telegram-bot:
+    build:
+      context: .  # Контекст — корень проекта
+      dockerfile: docker/Dockerfile
+    container_name: telegram-bot
+    restart: always
+    env_file:
+      - .env  # Загружаем переменные окружения
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - ./app:/app
+    depends_on:
+      - elasticsearch  # Указываем, что ElasticSearch должен быть запущен перед ботом
+    networks:
+      - app-network
+
+  elasticsearch:
+    image: elasticsearch:8.6.2
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node  # Запуск в режиме Standalone
+      - xpack.security.enabled=false  # Отключаем защиту, если она не нужна
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"  # Ограничиваем потребление памяти
+    ports:
+      - "9200:9200"  # API ElasticSearch
+      - "9300:9300"  # Для внутренних соединений
+    volumes:
+      - ./elasticsearch_data:/usr/share/elasticsearch/data  # Храним данные в папке
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
